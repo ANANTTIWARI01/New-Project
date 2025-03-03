@@ -1,23 +1,12 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import documentService from '../../services/documentService';
+import axios from 'axios';
 
-export const uploadDocument = createAsyncThunk(
-  'documents/upload',
-  async (documentData, { rejectWithValue }) => {
-    try {
-      const response = await documentService.uploadDocument(documentData);
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Upload failed');
-    }
-  }
-);
-
+// Async thunks
 export const fetchDocuments = createAsyncThunk(
   'documents/fetchAll',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await documentService.getDocuments();
+      const response = await axios.get('/api/documents');
       return response.data;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Failed to fetch documents');
@@ -25,11 +14,23 @@ export const fetchDocuments = createAsyncThunk(
   }
 );
 
-export const deleteDocument = createAsyncThunk(
+export const uploadDocument = createAsyncThunk(
+  'documents/upload',
+  async (documentData, { rejectWithValue }) => {
+    try {
+      const response = await axios.post('/api/documents', documentData);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || 'Upload failed');
+    }
+  }
+);
+
+export const deleteDocumentAsync = createAsyncThunk(
   'documents/delete',
   async (documentId, { rejectWithValue }) => {
     try {
-      await documentService.deleteDocument(documentId);
+      await axios.delete(`/api/documents/${documentId}`);
       return documentId;
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Delete failed');
@@ -41,36 +42,46 @@ const initialState = {
   documents: [],
   loading: false,
   error: null,
-  currentDocument: null
 };
 
 const documentSlice = createSlice({
   name: 'documents',
   initialState,
   reducers: {
-    setCurrentDocument: (state, action) => {
-      state.currentDocument = action.payload;
-    },
-    clearError: (state) => {
+    setDocuments: (state, action) => {
+      state.documents = action.payload;
+      state.loading = false;
       state.error = null;
-    }
+    },
+    addDocument: (state, action) => {
+      state.documents.push(action.payload);
+      state.loading = false;
+      state.error = null;
+    },
+    updateDocument: (state, action) => {
+      const index = state.documents.findIndex(doc => doc.id === action.payload.id);
+      if (index !== -1) {
+        state.documents[index] = action.payload;
+      }
+      state.loading = false;
+      state.error = null;
+    },
+    deleteDocument: (state, action) => {
+      state.documents = state.documents.filter(doc => doc.id !== action.payload);
+      state.loading = false;
+      state.error = null;
+    },
+    setLoading: (state, action) => {
+      state.loading = action.payload;
+    },
+    setError: (state, action) => {
+      state.error = action.payload;
+      state.loading = false;
+    },
   },
   extraReducers: (builder) => {
     builder
-      // Upload cases
-      .addCase(uploadDocument.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
-      .addCase(uploadDocument.fulfilled, (state, action) => {
-        state.loading = false;
-        state.documents.unshift(action.payload);
-      })
-      .addCase(uploadDocument.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
-      // Fetch cases
+      // Fetch documents cases
       .addCase(fetchDocuments.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -83,21 +94,41 @@ const documentSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       })
-      // Delete cases
-      .addCase(deleteDocument.pending, (state) => {
+      // Upload document cases
+      .addCase(uploadDocument.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(deleteDocument.fulfilled, (state, action) => {
+      .addCase(uploadDocument.fulfilled, (state, action) => {
         state.loading = false;
-        state.documents = state.documents.filter(doc => doc._id !== action.payload);
+        state.documents.push(action.payload);
       })
-      .addCase(deleteDocument.rejected, (state, action) => {
+      .addCase(uploadDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
+      })
+      // Delete document cases
+      .addCase(deleteDocumentAsync.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteDocumentAsync.fulfilled, (state, action) => {
+        state.loading = false;
+        state.documents = state.documents.filter(doc => doc.id !== action.payload);
+      })
+      .addCase(deleteDocumentAsync.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload;
       });
-  }
+  },
 });
 
-export const { setCurrentDocument, clearError } = documentSlice.actions;
+export const {
+  setDocuments,
+  addDocument,
+  updateDocument,
+  deleteDocument,
+  setLoading,
+  setError,
+} = documentSlice.actions;
 export default documentSlice.reducer; 

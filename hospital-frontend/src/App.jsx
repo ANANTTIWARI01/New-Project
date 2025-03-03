@@ -58,7 +58,7 @@ function App() {
     <Provider store={store}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Router>
+        <Router future={{ v7_startTransition: true }}>
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />

@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
-import { fetchDocuments, uploadDocument, deleteDocument } from '../store/slices/documentSlice';
+import { fetchDocuments, uploadDocument, deleteDocumentAsync } from '../store/slices/documentSlice';
 
 const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
@@ -71,7 +71,7 @@ const Documents = () => {
 
   const handleDelete = async (documentId) => {
     if (window.confirm('Are you sure you want to delete this document?')) {
-      await dispatch(deleteDocument(documentId));
+      await dispatch(deleteDocumentAsync(documentId));
     }
   };
 
